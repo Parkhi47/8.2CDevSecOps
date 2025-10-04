@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        // Use your Jenkins credential ID here
+        EMAIL_CREDENTIALS = 'gmail-jenkins'
+        EMAIL_RECIPIENT = 'parkhi5200@gmail.com'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -18,17 +24,6 @@ pipeline {
             steps {
                 bat 'npm test || exit 0'
             }
-            post {
-                always {
-                    emailext (
-                        subject: "Jenkins Pipeline: Run Tests - ${currentBuild.currentResult}",
-                        body: """<p>Hello,</p>
-                                 <p>The Run Tests stage has finished with status: ${currentBuild.currentResult}.</p>""",
-                        to: 'parkhi5200@gmail.com',
-                        attachLog: true
-                    )
-                }
-            }
         }
 
         stage('Generate Coverage Report') {
@@ -41,17 +36,27 @@ pipeline {
             steps {
                 bat 'npm audit || exit 0'
             }
-            post {
-                always {
-                    emailext (
-                        subject: "Jenkins Pipeline: Security Scan - ${currentBuild.currentResult}",
-                        body: """<p>Hello,</p>
-                                 <p>The Security Scan stage has finished with status: ${currentBuild.currentResult}.</p>""",
-                        to: 'parkhi5200@gmail.com',
-                        attachLog: true
-                    )
-                }
-            }
+        }
+    }
+
+    post {
+        always {
+            // Send email with log after pipeline completion
+            emailext(
+                subject: "Jenkins Build ${currentBuild.fullDisplayName} - ${currentBuild.result}",
+                body: """
+                Hello, <br>
+                The Jenkins pipeline has completed. <br>
+                Build Status: ${currentBuild.currentResult} <br>
+                <br>
+                You can see the console output attached.
+                """,
+                to: "${EMAIL_RECIPIENT}",
+                attachLog: true,
+                replyTo: "${EMAIL_RECIPIENT}",
+                from: "${EMAIL_RECIPIENT}",
+                credentialsId: "${EMAIL_CREDENTIALS}"
+            )
         }
     }
 }
