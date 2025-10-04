@@ -1,70 +1,73 @@
 pipeline {
     agent any
 
+    environment {
+        NODE_ENV = 'development'
+        EMAIL_RECIPIENT = 'parkhi5200@gmail.com' // replace with your email
+        CACHE_DIR = "${WORKSPACE}\\.cache_node_modules"
+    }
+
     stages {
-        stage('Build') {
+        stage('Checkout SCM') {
             steps {
-                echo 'Building the project...'
-                // Simulate a build step and save logs
-                sh 'echo "Build logs..." > build.log'
+                git url: 'https://github.com/Parkhi47/8.2CDevSecOps.git', branch: 'main'
             }
         }
 
-        stage('Test') {
+        stage('Install Dependencies') {
             steps {
-                echo 'Running tests...'
-                // Simulate test step and save logs
-                sh 'echo "Test logs..." > test.log'
-            }
-            post {
-                always {
-                    script {
-                        // Check if log exists before emailing
-                        if (fileExists('test.log')) {
-                            emailext(
-                                subject: "Pipeline Test Stage - ${currentBuild.currentResult}",
-                                body: """Hello,
-
-The Test stage has completed with status: ${currentBuild.currentResult}.
-Please find the attached test logs.""",
-                                to: "parkhi5200@example.com",
-                                attachLog: true,
-                                attachmentsPattern: 'test.log',
-                                mimeType: 'text/plain'
-                            )
-                        } else {
-                            echo "Test log not found, skipping email attachment."
-                        }
+                script {
+                    // Restore cached node_modules if available
+                    if (fileExists("${CACHE_DIR}\\package-lock.json")) {
+                        echo "Restoring cached node_modules..."
+                        bat "xcopy /E /I /Y \"${CACHE_DIR}\\node_modules\" \"${WORKSPACE}\\node_modules\""
                     }
+
+                    // Install dependencies
+                    bat 'npm install'
+
+                    // Save node_modules to cache
+                    bat "if not exist \"${CACHE_DIR}\" mkdir \"${CACHE_DIR}\""
+                    bat "xcopy /E /I /Y node_modules \"${CACHE_DIR}\\node_modules\""
+                    bat "copy /Y package-lock.json \"${CACHE_DIR}\\package-lock.json\""
                 }
             }
         }
 
-        stage('Security Scan') {
+        stage('Run Tests') {
             steps {
-                echo 'Running security scan...'
-                // Simulate security scan step and save logs
-                sh 'echo "Security scan logs..." > scan.log'
+                bat 'npm test'
             }
             post {
                 always {
-                    script {
-                        if (fileExists('scan.log')) {
-                            emailext(
-                                subject: "Pipeline Security Scan Stage - ${currentBuild.currentResult}",
-                                body: """Hello,
+                    emailext(
+                        subject: "Jenkins: Run Tests Stage - ${currentBuild.currentResult}",
+                        body: "The 'Run Tests' stage has finished with status: ${currentBuild.currentResult}",
+                        attachLog: true,
+                        to: "${EMAIL_RECIPIENT}"
+                    )
+                }
+            }
+        }
 
-The Security Scan stage has completed with status: ${currentBuild.currentResult}.
-Please find the attached security scan logs.""",
-                                to: "developer@example.com",
-                                attachLog: true,
-                                attachmentsPattern: 'scan.log',
-                                mimeType: 'text/plain'
-                            )
-                        } else {
-                            echo "Security scan log not found, skipping email attachment."
-                        }
-                    }
+        stage('Generate Coverage Report') {
+            steps {
+                bat 'npm run coverage'
+            }
+        }
+
+        stage('NPM Audit (Security Scan)') {
+            steps {
+                bat 'npm audit'
+            }
+            post {
+                always {
+                    emailext(
+                        subject: "Jenkins: NPM Audit Stage - ${currentBuild.currentResult}",
+                        body: "The 'NPM Audit' stage has finished with status: ${currentBuild.currentResult}",
+                        attachLog: true,
+                        to: "${EMAIL_RECIPIENT}"
+                    )
                 }
             }
         }
@@ -72,7 +75,13 @@ Please find the attached security scan logs.""",
 
     post {
         always {
-            echo "Pipeline completed with status: ${currentBuild.currentResult}"
+            echo 'Pipeline finished!'
+        }
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
