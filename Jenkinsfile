@@ -17,19 +17,19 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    // Optional caching of node_modules
+                    // Restore cached node_modules if available
                     if (fileExists("${CACHE_DIR}\\package-lock.json")) {
                         echo "Restoring cached node_modules..."
-                        bat "xcopy /E /I /Y ${CACHE_DIR}\\node_modules .\\node_modules"
+                        bat "xcopy /E /I /Y \"${CACHE_DIR}\\node_modules\" .\\node_modules"
                     }
 
                     // Install npm dependencies
                     bat 'npm install'
 
                     // Save node_modules to cache
-                    bat "if not exist ${CACHE_DIR} mkdir ${CACHE_DIR}"
-                    bat "xcopy /E /I /Y node_modules ${CACHE_DIR}\\node_modules"
-                    bat "copy package-lock.json ${CACHE_DIR}\\package-lock.json"
+                    bat "if not exist \"${CACHE_DIR}\" mkdir \"${CACHE_DIR}\""
+                    bat "xcopy /E /I /Y node_modules \"${CACHE_DIR}\\node_modules\""
+                    bat "copy /Y package-lock.json \"${CACHE_DIR}\\\""
                 }
             }
         }
