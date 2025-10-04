@@ -5,7 +5,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Clone your repository
-                git branch: 'main', url: 'https://github.com/your_github_username/8.2CDevSecOps.git'
+                git branch: 'main', url: 'https://github.com/Parkhi47/8.2CDevSecOps.git'
             }
         }
 
