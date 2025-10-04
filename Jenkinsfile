@@ -8,7 +8,7 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
                 git branch: 'main', url: 'https://github.com/Parkhi47/8.2CDevSecOps.git'
             }
@@ -58,7 +58,7 @@ pipeline {
 
         stage('NPM Audit (Security Scan)') {
             steps {
-                bat 'npm audit || exit /b 0'
+                bat 'npm audit || exit /b 0' // continue even if audit finds vulnerabilities
             }
             post {
                 always {
