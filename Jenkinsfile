@@ -1,87 +1,40 @@
 pipeline {
     agent any
 
-    environment {
-        NODE_ENV = 'development'
-        EMAIL_RECIPIENT = 'parkhi5200@gmail.com'  // Replace with your email
-        CACHE_DIR = "${WORKSPACE}\\.cache_node_modules"
-    }
-
     stages {
-        stage('Checkout SCM') {
+        stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Parkhi47/8.2CDevSecOps.git'
+                // Clone your repository
+                git branch: 'main', url: 'https://github.com/your_github_username/8.2CDevSecOps.git'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                script {
-                    // Restore cached node_modules if available
-                    if (fileExists("${CACHE_DIR}\\package-lock.json")) {
-                        echo "Restoring cached node_modules..."
-                        bat "xcopy /E /I /Y \"${CACHE_DIR}\\node_modules\" .\\node_modules"
-                    }
-
-                    // Install npm dependencies
-                    bat 'npm install'
-
-                    // Save node_modules to cache
-                    bat "if not exist \"${CACHE_DIR}\" mkdir \"${CACHE_DIR}\""
-                    bat "xcopy /E /I /Y node_modules \"${CACHE_DIR}\\node_modules\""
-                    bat "copy /Y package-lock.json \"${CACHE_DIR}\\\""
-                }
+                // Windows-friendly command
+                bat 'npm install'
             }
         }
 
         stage('Run Tests') {
             steps {
-                bat 'npm test || exit /b 0' // continue even if tests fail
-            }
-            post {
-                always {
-                    emailext(
-                        subject: "Jenkins: Run Tests Stage - ${currentBuild.currentResult}",
-                        body: "The 'Run Tests' stage finished with status: ${currentBuild.currentResult}",
-                        attachLog: true,
-                        to: "${EMAIL_RECIPIENT}"
-                    )
-                }
+                // Run tests but continue even if some fail
+                bat 'npm test || exit 0'
             }
         }
 
         stage('Generate Coverage Report') {
             steps {
-                bat 'npm run coverage || exit /b 0'
+                // Run coverage script; continue on errors
+                bat 'npm run coverage || exit 0'
             }
         }
 
         stage('NPM Audit (Security Scan)') {
             steps {
-                bat 'npm audit || exit /b 0' // continue even if audit finds vulnerabilities
+                // Run security scan
+                bat 'npm audit || exit 0'
             }
-            post {
-                always {
-                    emailext(
-                        subject: "Jenkins: NPM Audit Stage - ${currentBuild.currentResult}",
-                        body: "The 'NPM Audit' stage finished with status: ${currentBuild.currentResult}",
-                        attachLog: true,
-                        to: "${EMAIL_RECIPIENT}"
-                    )
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo 'Pipeline finished!'
-        }
-        success {
-            echo 'Pipeline succeeded!'
-        }
-        failure {
-            echo 'Pipeline failed!'
         }
     }
 }
